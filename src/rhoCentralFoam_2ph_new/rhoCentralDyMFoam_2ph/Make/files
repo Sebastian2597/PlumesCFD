@@ -1,0 +1,3 @@
+rhoCentralDyMFoam_2ph.C
+
+EXE = $(FOAM_APPBIN)/rhoCentralDyMFoam_2ph
