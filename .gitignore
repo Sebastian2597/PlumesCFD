@@ -1,0 +1,44 @@
+# 1. Ignore all folders named processor* (e.g., processor0, processor123)
+processor*/
+
+# 2. Ignore all files with 'log' in the name and no extension
+# We assume "no extension" means no dot after the log in filename
+# This pattern matches any file containing "log" but no dot after
+# The safest is to ignore files containing log but not ending with an extension:
+# We'll do a bit of approximation with two patterns:
+
+# Ignore files containing 'log' without a dot after
+# Match files like "errorlog" but NOT "error.log" or "errorlog.txt"
+# So exclude files with dot anywhere after 'log' by only matching those without a dot
+# Gitignore doesn't support negative lookaheads, so approximate:
+
+# Ignore files named *log (with no extension)
+*log
+# Ignore files with 'log' anywhere but no extension
+# To avoid ignoring things like *.log or log.txt, this is tricky.
+# So you may want to ignore files named exactly *log or containing 'log' but no dot
+
+# As a compromise:
+# Ignore files containing 'log' but not having dot after 'log'
+# So, ignore files with 'log' and no dot anywhere in filename:
+*[!.\]*log*[!.\]*
+
+# This is tricky, and gitignore syntax is limited — test carefully!
+
+# 3. Ignore all time folders everywhere, except inside simulation_results
+
+# First ignore all folders named only with digits (time folders)
+# ^ matches start, $ end; but gitignore doesn't support regex anchors, so:
+# Match directories named only digits anywhere:
+
+[0-9]*/
+[0-9]*.[0-9]*/
+
+# But that also matches folders inside simulation_results, which we want to keep
+
+# So add an exception for simulation_results and its subfolders:
+
+# Don't ignore any folder named digits inside simulation_results:
+!simulation_results/**/[0-9]*/
+!simulation_results/**/[0-9]*.[0-9]*/
+
