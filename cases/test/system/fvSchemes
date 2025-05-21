@@ -1,0 +1,61 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  v2012
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+fluxScheme      Kurganov;
+
+ddtSchemes
+{
+    default         	CrankNicolson 0.9;
+}
+
+gradSchemes
+{
+    default         	cellLimited leastSquares 1.0;
+	grad(N)	cellLimited leastSquares 1.0;
+	grad(Y)	cellLimited leastSquares 1.0;
+	grad(drdt) cellLimited leastSquares 1.0;
+	grad(r_droplet_actual) cellLimited leastSquares 1.0;
+}
+
+divSchemes
+{
+    default           none;
+    div(tauMC)        Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+ default linear;
+ reconstruct(rho) vanAlbada;
+ reconstruct(U)   vanAlbadaV;
+ reconstruct(T)   vanAlbada;
+ reconstruct(N)   linearUpwind grad(N);
+ reconstruct(Y)   linearUpwind grad(Y);
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+
+// ************************************************************************* //

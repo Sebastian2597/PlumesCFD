@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
 				* sticking_coefficient * p_lambda_average;
 		}
 		
-		mdot_a.primitiveFieldRef() = 0.0; // REMOVE THIS
+		mdot_s.primitiveFieldRef() = 0.0; // REMOVE THIS
 		
 		forAll(mesh.boundary(), patchI)
 		{
