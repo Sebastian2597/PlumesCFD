@@ -134,12 +134,12 @@ def plot_fields_over_line_all_timesteps(simulation_results_path, pointa, pointb,
     plt.show()
 
 # === USER SETTINGS ===
-simulation_results_path = "../cases/wall_interactions/wall_accretion_fixedT273/simulation_results/"
+simulation_results_path = "../cases/wall_interactions/wall_sublimation_zeroGradientT/simulation_results/"
 pointa = (0, 0, 0)
 pointb = (1.5, 0, 0)
 fields = ['p','T', 'rho', 'U', 'Mach', 'S_sat', 'J', 'N', 'Y']
 specific_time = ['0.00','15.58']  # Use None to plot all time steps or ['27.44'] for selected time steps
-#specific_time = None
+specific_time = None
 
 units = {'p': r'P [Pa]',
          'T': r'T [K]',
