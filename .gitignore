@@ -30,15 +30,18 @@ processor*/
 # First ignore all folders named only with digits (time folders)
 # ^ matches start, $ end; but gitignore doesn't support regex anchors, so:
 # Match directories named only digits anywhere:
-
-[0-9]*/
+!0/
+[1-9]*/
 [0-9]*.[0-9]*/
+[0-9]*.[0-9][0-9]*/
 
 # But that also matches folders inside simulation_results, which we want to keep
 
 # So add an exception for simulation_results and its subfolders:
 
 # Don't ignore any folder named digits inside simulation_results:
-!simulation_results/**/[0-9]*/
-!simulation_results/**/[0-9]*.[0-9]*/
+!**/simulation_results/
+!**/simulation_results/**
+!**/simulation_results/**/[0-9]*/
+!**/simulation_results/**/[0-9]*.[0-9][0-9]*/
 
