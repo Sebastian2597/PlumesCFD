@@ -367,7 +367,8 @@ int main(int argc, char *argv[])
 		}
 		
 		mdot_s.primitiveFieldRef() = 0.0; // REMOVE THIS
-		
+		mdot_a.primitiveFieldRef() = 0.0; // REMOVE THIS
+
 		forAll(mesh.boundary(), patchI)
 		{
 			const fvPatch& patch = mesh.boundary()[patchI];

@@ -1,7 +1,7 @@
 // Auxilliary nondimensional term
 scalar Tterm = max(0.0, 1.0 - T[cellI]/T_crit.value()); // max used to avoid negatives
 
-S_sat[cellI] = p[cellI]/psat_lg[cellI]; // supersaturation ratio
+S_sat[cellI] = p[cellI]/psat[cellI]; // supersaturation ratio
 
 if (T[cellI] > 273.16)
 	{

@@ -3,16 +3,19 @@ import subprocess
 import numpy as np
 
 import editBoundaryFile
-import editInitialConditionP
-import editInitialConditionT
+import editInitialCondition
+import editBoundaryConditionT
+import quasi1DIsentropic
 import monitorSimulation
 import accretionRate
 import updateGeometry
 import createGmshGeoFile
 import readWallFields
 import setWallInteractionTerms
+import matplotlib.pyplot as plt
 
-case = "../cases/wall_interactions/wall_accretion"
+
+case = "../cases/test"
 initial_pressure_values = [600, 300]
 original_mesh_name = 'baseline_channel_remake_Gmsh_coarse'
 current_mesh_name = original_mesh_name
@@ -28,6 +31,8 @@ wall_temperature_boundary_condition_start = 273 # [K]
 wall_temperature_boundary_condition_end = 273 # [K]
 
 
+
+
 os.chdir(case)
 
 # Run OpenFOAM commands in background
@@ -35,7 +40,7 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
     
     print("Creating Gmsh file from wall geometry...", flush=True)
     
-    gmsh_points = createGmshGeoFile.create('channel_data.csv', current_mesh_name)
+    gmsh_points, vertical_divisions_section = createGmshGeoFile.create('channel_data.csv', current_mesh_name)
     subprocess.run(f"cp {current_mesh_name}.geo {current_mesh_name}_original.geo", shell=True, check=True, stderr=subprocess.STDOUT)
     
     print("Done.\n", flush=True)
@@ -60,7 +65,7 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         
         print("Successfuly converted Gmsh file to Foam.\n", flush=True)
         
-        print("Editing boundary file & boundary conditions for pressure...", flush=True)
+        print("Editing boundary file & initial conditions for pressure, temperature, Mach number and velocity...", flush=True)
         
         editBoundaryFile.edit()
         
@@ -68,6 +73,15 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         
         number_of_cells = int(checkMesh.stdout.strip()[15:])
         
+        subprocess.run("postProcess -func writeCellCentres -latestTime", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
+
+        cell_centers_x = editInitialCondition.read_cell_centers()
+        
+        wall_coordinates, outerwall, top_wall_indices = readWallFields.get_wall_cells("0/C", vertical_divisions_section)
+
+        p_ini, T_ini, Mach_ini, U_ini = quasi1DIsentropic.compute_flow_variables(wall_coordinates[:,0], wall_coordinates[:,1], cell_centers_x)
+
+
         if simulation_time == 0:
             print("Initialising wall accretion & sublimation source terms for first steady state simulation...", flush=True)
             
@@ -76,9 +90,12 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
 
             print("Done.\n", flush=True)
         
-        editInitialConditionP.edit(number_of_cells, initial_pressure_values)
+        editInitialCondition.edit('p', p_ini)
+        editInitialCondition.edit('T', T_ini)
+        editInitialCondition.edit('Ma', Mach_ini)
+        editInitialCondition.edit('U', U_ini)
         
-        editInitialConditionT.edit(wall_temperature_boundary_condition_type, 214, wall_temperature_boundary_condition_start, wall_temperature_boundary_condition_end)
+        editBoundaryConditionT.edit(wall_temperature_boundary_condition_type, len(wall_coordinates), wall_temperature_boundary_condition_start, wall_temperature_boundary_condition_end)
         
         monitorSimulation.update_control_dict(steady_state_simulation_end_time)
 
@@ -97,12 +114,6 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         
         # check for convergence
         monitorSimulation.check_rms()
-        
-        print("Postprocessing all fields...", flush=True)
-        
-        subprocess.run("postProcess -func writeCellCentres -latestTime", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
-        
-        print("Done.\n", flush=True)        
    
         print("Copying files to simulation results folder...", flush=True)
         
@@ -129,7 +140,6 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         # check if r at any cell on the boundary > local cell height: if true then stop dr/dt evolution
 
         
-        wall_coordinates, outerwall, top_wall_indices = readWallFields.get_wall_cells(f"./{latestTime_str}/C", points_per_column=43)
     
         
         with open(f"./simulation_results/{simulation_time:.2f}/wall_coordinates", 'w') as f:

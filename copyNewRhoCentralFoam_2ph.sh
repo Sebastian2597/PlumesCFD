@@ -1,4 +1,4 @@
- bo#!/bin/bash
+#!/bin/bash
 
 # Define the source folder explicitly
 SOURCE="./src/rhoCentralFoam_2ph_new"
@@ -10,7 +10,7 @@ if [ ! -d "$SOURCE" ]; then
 fi
 
 # Set destination path
-DEST="/usr/lib/openfoam/openfoam2406/applications/solvers/compressible/rhoCentralFoam_2ph"
+DEST="/usr/lib/openfoam/openfoam2412/applications/solvers/compressible/rhoCentralFoam_2ph"
 
 # Remove existing folder if it exists
 if [ -d "$DEST" ]; then
@@ -32,6 +32,5 @@ fi
 chmod -R +x "$DEST"
 
 echo "Running Allwmake"
-/usr/lib/openfoam/openfoam2406/applications/solvers/compressible/rhoCentralFoam_2ph/Allwclean
-/usr/lib/openfoam/openfoam2406/applications/solvers/compressible/rhoCentralFoam_2ph/Allwmake
-
+/usr/lib/openfoam/openfoam2412/applications/solvers/compressible/rhoCentralFoam_2ph/Allwclean
+/usr/lib/openfoam/openfoam2412/applications/solvers/compressible/rhoCentralFoam_2ph/Allwmake

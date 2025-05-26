@@ -189,6 +189,6 @@ def create(csv_file, gmsh_file, vertical_divisions=86, horizontal_divisions=216)
         file.write(f"Physical Surface(\"longitudinal_symmetry\") = {{{', '.join(symmetry_entries)}}};\n")
         file.write(f"Physical Surface(\"lateral_sides\") = {{{', '.join(lateral_entries)}}};\n")
 
-    return np.array(points)
+    return np.array(points), vertical_divisions_section
 
 
