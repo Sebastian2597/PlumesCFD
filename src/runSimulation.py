@@ -15,7 +15,7 @@ import setWallInteractionTerms
 import matplotlib.pyplot as plt
 
 
-case = "../cases/test"
+case = "../cases/test/"
 initial_pressure_values = [600, 300]
 original_mesh_name = 'baseline_channel_remake_Gmsh_coarse'
 current_mesh_name = original_mesh_name
@@ -73,7 +73,7 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         
         number_of_cells = int(checkMesh.stdout.strip()[15:])
         
-        subprocess.run("postProcess -func writeCellCentres -latestTime", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
+        subprocess.run("postProcess -func writeCellCentres", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
 
         cell_centers_x = editInitialCondition.read_cell_centers()
         

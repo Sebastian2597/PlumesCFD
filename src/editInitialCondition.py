@@ -66,30 +66,47 @@ def extract_internal_field_vectors(file_path):
 
 
 
+
 def edit(field, field_values):
-    
     BC_file = "0/" + field
-    all_lines = []
+
+    with open(BC_file, "r") as f:
+        content = f.read()
+
+    # Patterns for replacing internalField
+    pattern_uniform = r'internalField\s+uniform\s+\([^\)]+\);' if field == 'U' else r'internalField\s+uniform\s+[\d\.Ee+-]+;'
+    pattern_nonuniform = (
+        r'internalField\s+nonuniform\s+List<vector>\s+\d+\s*\(.*?\)\s*;'
+        if field == 'U' else
+        r'internalField\s+nonuniform\s+List<scalar>\s+\d+\s*\(.*?\)\s*;'
+    )
+
+    # Construct replacement block
+    if field == 'U':
+        values_str = '\n'.join(f"({v} 0 0)" for v in field_values)
+        new_internal = (
+            f"internalField   nonuniform List<vector>\n"
+            f"{len(field_values)}\n(\n{values_str}\n);\n"
+        )
+    else:
+        values_str = '\n'.join(str(v) for v in field_values)
+        new_internal = (
+            f"internalField   nonuniform List<scalar>\n"
+            f"{len(field_values)}\n(\n{values_str}\n);\n"
+        )
+
+    # Replace nonuniform if present
+    new_content, n_subs = re.subn(pattern_nonuniform, new_internal, content, flags=re.DOTALL)
     
-    with open(BC_file, "r") as file:
-        lines = file.readlines()
-    
-    # Modify the boundary types
-    with open(BC_file, "w") as file:
-        #number_of_cells = 18000
-        first_lines = lines[:21]
-        first_lines.append(str(len(field_values)) + '\n(\n')
-        
-        last_lines = lines[-34:]
-        
-        field_lines = []
-        
-        for value in field_values:
-            field_lines.append(str(value) + "\n")
-                
-        all_lines = first_lines + field_lines + last_lines
-        
-        for line in all_lines:
-            file.write(line)
-        
-    return
+    # If not found, try replacing uniform
+    if n_subs == 0:
+        new_content, n_subs = re.subn(pattern_uniform, new_internal, content)
+
+    # Write back only if replacement succeeded
+    if n_subs > 0:
+        with open(BC_file, "w") as f:
+            f.write(new_content)
+    else:
+        raise ValueError("Failed to locate and replace internalField block.")
+
+
