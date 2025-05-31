@@ -16,11 +16,8 @@ import matplotlib.pyplot as plt
 
 
 case = "../cases/test/"
-initial_pressure_values = [600, 300]
-original_mesh_name = 'baseline_channel_remake_Gmsh_coarse'
+original_mesh_name = 'channel_mesh'
 current_mesh_name = original_mesh_name
-
-continue_from_last_simulation = True
 
 steady_state_simulation_end_time = 0.5
 simulation_end_time = 1440 # minutes
@@ -29,9 +26,6 @@ maximum_number_of_runs = 100
 wall_temperature_boundary_condition_type = 'zeroGradient' # fixedValue or zeroGradient
 wall_temperature_boundary_condition_start = 273 # [K]
 wall_temperature_boundary_condition_end = 273 # [K]
-
-
-
 
 os.chdir(case)
 
@@ -138,9 +132,6 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
             
         
         # check if r at any cell on the boundary > local cell height: if true then stop dr/dt evolution
-
-        
-    
         
         with open(f"./simulation_results/{simulation_time:.2f}/wall_coordinates", 'w') as f:
             for value in wall_coordinates[:,1]:
@@ -148,10 +139,6 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         
         wall_cell_lengths, wall_cell_heights = readWallFields.compute_wall_cell_sizes(wall_coordinates, outerwall)
                 
-
-        #T_wall = readWallFields.read_static_field(f'./{latestTime_str}/T', top_wall_indices)
-        #rho_wall = readWallFields.read_static_field(f'./{latestTime_str}/rho', top_wall_indices)
-        #U_wall = readWallFields.read_vector_field(f'./{latestTime_str}/U', top_wall_indices)
         mdot_a = readWallFields.read_static_field(f'./{latestTime_str}/mdot_a', top_wall_indices)
         mdot_s = readWallFields.read_static_field(f'./{latestTime_str}/mdot_a', top_wall_indices)
 
@@ -211,13 +198,7 @@ with open("OpenFOAM_simulation_log", "w") as log_file:
         updateGeometry.update(f'./{current_mesh_name}', updated_wall_coordinates_Gmsh, len(gmsh_points))
         
         print("Done.\n", flush=True)
-        
-        print("Setting wall accretion & sublimation source terms for next steady state simulation...", flush=True)
-        
-        #setWallInteractionTerms.update('mdot_a', top_wall_indices, mdot_a)
-        #setWallInteractionTerms.update('mdot_s', top_wall_indices, mdot_s)
-
-        print("Done.\n", flush=True)
+    
         
         print("Removing steady state results & processor folders...", flush=True)
         
