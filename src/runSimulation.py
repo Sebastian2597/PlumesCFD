@@ -15,7 +15,7 @@ import setWallInteractionTerms
 import matplotlib.pyplot as plt
 
 
-case = "../cases/test/"
+case = "./cases/test/"
 original_mesh_name = 'channel_mesh'
 current_mesh_name = original_mesh_name
 
