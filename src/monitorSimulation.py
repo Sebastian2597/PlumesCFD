@@ -11,50 +11,20 @@ steady_count_required = 5
 check_interval_seconds = 30
 fields = ['p', 'U', 'T', 'J', 'S_sat', 'N', 'Y']  # Fields to monitor
 
-convergence_thresholds = {
-    'p': 2e-4,
-    'U': 9e-5,
-    'T': 9e-5,
-    'J': 1e-2,      # Looser due to steep gradients / large magnitude
-    'S_sat': 1e-3,
-    'N': 5e-3,
-    'Y': 5e-4
-}
-
 # ---------- RMS UTILS ----------
 def reconstruct_last_two_time_steps():
-    processor_count = 7  # processor0 through processor12
-    all_time_steps = []
-
-    # Find valid time steps from processor0
-    try:
-        all_time_steps = sorted([float(d) for d in os.listdir('processor0')
-                                 if os.path.isdir(os.path.join('processor0', d))
-                                 and d not in ['0', 'constant']])
-    except FileNotFoundError:
-        print("[ERROR] processor0 directory not found.")
-        return None
-
+    all_time_steps = sorted([float(d) for d in os.listdir('processor0')
+                             if os.path.isdir(os.path.join('processor0', d)) 
+                             and d not in ['0', 'constant']])
+    
     if len(all_time_steps) < 2:
         return None
-
+    
     last_two = [all_time_steps[-2], all_time_steps[-1]]
-
-    # Check if all processors have these time steps
-    for proc_id in range(processor_count):
-        proc_dir = f'processor{proc_id}'
-        for ts in last_two:
-            ts_path = os.path.join(proc_dir, f"{ts:.6g}")  # Avoid float rounding issues
-            if not os.path.isdir(ts_path):
-                print(f"[WAIT] {ts:.6g} not yet found in {proc_dir}. Skipping reconstruction.")
-                return None
-
-    # Proceed with reconstruction if all processor folders contain the time steps
     for ts in last_two:
         subprocess.run(['reconstructPar', '-time', str(ts)],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    print(f"Computing RMS errors from {last_two[0]} and {last_two[1]}..." )
+    print(f"Computing RMS errors from {last_two[0]} and {last_two[1]}...", flush=True)
     return last_two
 
 def calculate_rms_scalar_field(field_file):
@@ -152,8 +122,8 @@ def update_control_dict(new_end_time):
             else:
                 f.write(line)
 
-def check_rms():
-    print("Running simulation & monitoring convergence based on RMS error...")
+def check_rms(convergence_thresholds):
+    print("Running simulation & monitoring convergence based on RMS error...", flush=True)
     last_checked = set()
     steady_count = 0
 
@@ -166,13 +136,13 @@ def check_rms():
             # Check if new time steps appeared
             new_dirs = set(time_dirs) - last_checked
             if len(time_dirs) >= 2 and new_dirs:
-                print(f"\nNew time steps detected: {sorted(new_dirs)}")
+                print(f"\nNew time steps detected: {sorted(new_dirs)}", flush=True)
                 last_checked = set(time_dirs)
 
                 last_two = reconstruct_last_two_time_steps()
                 if last_two is not None:
                     rms_errors = compute_rms_errors(last_two)
-                    print(f"RMS Errors: {rms_errors}")
+                    print(f"RMS Errors: {rms_errors}", flush=True)
 
                     # Check all fields against their individual convergence thresholds
                     converged_fields = []
@@ -187,22 +157,21 @@ def check_rms():
                     
                     if len(unconverged_fields) == 0:
                         steady_count += 1
-                        print(f"All fields below thresholds. Steady count: {steady_count}/{steady_count_required}")
+                        print(f"All fields below thresholds. Steady count: {steady_count}/{steady_count_required}", flush=True)
                     else:
                         steady_count = 0
-                        print("Unconverged fields:")
+                        print("Unconverged fields:", flush=True)
                         for field, err, thresh in unconverged_fields:
-                            print(f"   - {field}: {err:.3e} > threshold {thresh:.3e}")
+                            print(f"   - {field}: {err:.3e} > threshold {thresh:.3e}", flush=True)
 
 
                     if steady_count >= steady_count_required:
-                        print("\nSteady state reached based on RMS. Stopping simulation.\n")
+                        print("\nSteady state reached based on RMS. Stopping simulation.\n", flush=True)
                         update_control_dict(last_two[-1])  # Update endTime
                         break
 
             time.sleep(check_interval_seconds)
 
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}", flush=True)
             time.sleep(check_interval_seconds)
-

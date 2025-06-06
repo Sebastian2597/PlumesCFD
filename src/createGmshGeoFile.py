@@ -9,9 +9,9 @@ import csv
 import numpy as np
 
 
-def create(csv_file, gmsh_file, vertical_divisions=86, horizontal_divisions=216):
+def create(csv_file, gmsh_file, vertical_divisions, horizontal_divisions, progression_vertical, progression_horizontal, bump_horizontal):
     """
-    Convert a CSV file of (x, y) coordinates into a Gmsh script with optimized transfinite mesh.
+    Convert a CSV file of (x, y) coordinates into a Gmsh script with optimised transfinite mesh.
 
     Parameters:
     - csv_file: str, path to the input CSV file with x, y coordinates.
@@ -124,21 +124,18 @@ def create(csv_file, gmsh_file, vertical_divisions=86, horizontal_divisions=216)
             
             
             # Assign progression to horizontal and vertical lines for each section
-            progression_vertical = 0.935
             if i == 0:  # First section
-                progression_horizontal = 0.995
                 
                 file.write(f"Transfinite Curve {{{horizontal_base_line_indices[i]}}} = {horizontal_divisions_section} Using Progression {progression_horizontal};\n")
                 file.write(f"Transfinite Curve {{{horizontal_line_indices[i]}}} = {horizontal_divisions_section} Using Progression {progression_horizontal};\n")
 
             elif i == num_sections - 1:  # Last section
-                progression_horizontal = 1.005
+                progression_horizontal = 1 + np.round((1 - progression_horizontal), 4)
                 
                 file.write(f"Transfinite Curve {{{horizontal_base_line_indices[i]}}} = {horizontal_divisions_section} Using Progression {progression_horizontal};\n")
                 file.write(f"Transfinite Curve {{{horizontal_line_indices[i]}}} = {horizontal_divisions_section} Using Progression {progression_horizontal};\n")
       
             else: 
-                bump_horizontal = 0.93
                 
                 file.write(f"Transfinite Curve {{{horizontal_base_line_indices[i]}}} = {horizontal_divisions_section} Using Bump {bump_horizontal};\n")
                 file.write(f"Transfinite Curve {{{horizontal_line_indices[i]}}} = {horizontal_divisions_section} Using Bump {bump_horizontal};\n")
