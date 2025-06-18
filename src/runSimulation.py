@@ -97,7 +97,7 @@ print("===========================================================\n", flush=Tru
     
 print("Creating Gmsh file from wall geometry...", flush=True)
 
-gmsh_points, vertical_divisions_section = createGmshGeoFile.create('channel_data.csv', mesh_name, mesh_vertical_divisions, mesh_horizontal_divisions, mesh_progression_vertical, mesh_progression_horizontal, mesh_bump_horizontal)
+gmsh_points = createGmshGeoFile.create('channel_data.csv', mesh_name, mesh_vertical_divisions, mesh_horizontal_divisions, mesh_progression_vertical, mesh_progression_horizontal, mesh_bump_horizontal)
 
 print("Done.\n", flush=True)
 
@@ -137,7 +137,7 @@ while simulation_time < (simulation_end_time * 60) and number_of_runs <= maximum
 
     cell_centers_x = editInitialCondition.read_cell_centers()
     
-    wall_coordinates, outerwall, top_wall_indices = readWallFields.get_wall_cells("0/C", vertical_divisions_section)
+    wall_coordinates, outerwall, top_wall_indices = readWallFields.get_wall_cells("0/C", mesh_vertical_divisions)
 
     p_ini, T_ini, Mach_ini, U_ini = quasi1DIsentropic.compute_flow_variables(wall_coordinates[:,0], wall_coordinates[:,1], cell_centers_x)
 

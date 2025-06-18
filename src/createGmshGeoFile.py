@@ -106,7 +106,7 @@ def create(csv_file, gmsh_file, vertical_divisions, horizontal_divisions, progre
         surface_index = 1
         surface_indices = []  # Track surface indices for extrusion
         
-        vertical_divisions_section = int(np.round(vertical_divisions / num_sections))
+        vertical_divisions_section = vertical_divisions
 
         for i in range(num_sections):
             
@@ -186,6 +186,6 @@ def create(csv_file, gmsh_file, vertical_divisions, horizontal_divisions, progre
         file.write(f"Physical Surface(\"longitudinal_symmetry\") = {{{', '.join(symmetry_entries)}}};\n")
         file.write(f"Physical Surface(\"lateral_sides\") = {{{', '.join(lateral_entries)}}};\n")
 
-    return np.array(points), vertical_divisions_section
+    return np.array(points)
 
 
