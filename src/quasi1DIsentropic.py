@@ -5,7 +5,7 @@ from scipy.optimize import fsolve
 gamma = 1.333
 R = 461.52
 T0 = 273.16
-p0 = 611.2
+p0 = 611.657
 
 def area_mach_relation(M, A_Astar):
     term1 = (2 / (gamma + 1)) * (1 + ((gamma - 1) / 2) * M**2)
@@ -27,7 +27,7 @@ def velocity_magnitude(T, M):
     U = c * M
     return U
 
-def compute_flow_variables(wall_coordinates_x, wall_coordinates_y, cell_centers_x, gamma=1.333, R=461.52, T0=273.16, p0=611.2):
+def compute_flow_variables(wall_coordinates_x, wall_coordinates_y, cell_centers_x, gamma=1.333, R=461.52, T0=273.16, p0=611.657):
     x = wall_coordinates_x
     y = wall_coordinates_y
     A = 2 * y

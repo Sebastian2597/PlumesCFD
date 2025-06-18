@@ -242,14 +242,14 @@ int main(int argc, char *argv[])
         Source_e = -h_droplet*(Source_Y_nucleation +
                                 Source_Y_growth_active_coeff*rhoY);
 								
-		Source_e_wall = -h_droplet*(mdot_a - mdot_s);
+		Source_e_wall = -h_droplet*(mdot_a + mdot_s);
 
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi) ==
-        -(Source_Y_nucleation + Source_Y_growth_active_coeff*rhoY + mdot_a + mdot_s));
+        -(Source_Y_nucleation + Source_Y_growth_active_coeff*rhoY));
 
         // --- Solve momentum
-		volVectorField Source_U("Source_U", -U*(Source_Y + mdot_a - mdot_s));
+		volVectorField Source_U("Source_U", -U*(Source_Y + mdot_a + mdot_s));
 		volVectorField Source_U_linear_explicit("Source_U_linear_explicit", SourceMomentumFactor*rhoU);
 
         solve(fvm::ddt(rhoU) + fvc::div(phiUp) ==

@@ -141,7 +141,6 @@ while simulation_time < (simulation_end_time * 60) and number_of_runs <= maximum
 
     p_ini, T_ini, Mach_ini, U_ini = quasi1DIsentropic.compute_flow_variables(wall_coordinates[:,0], wall_coordinates[:,1], cell_centers_x)
 
-
     if simulation_time == 0:
         print("Initialising wall accretion & sublimation source terms for first steady state simulation...", flush=True)
         
@@ -189,6 +188,8 @@ while simulation_time < (simulation_end_time * 60) and number_of_runs <= maximum
     subprocess.run(f"cp -r {latestTime_str} ./simulation_results/{simulation_time:.2f}", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
 
     subprocess.run(f"cp -r constant ./simulation_results/{simulation_time:.2f}", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
+
+    subprocess.run(f"cp -r system ./simulation_results/{simulation_time:.2f}", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
     
     subprocess.run(f"cp foam.foam ./simulation_results/{simulation_time:.2f}", shell=True, check=True, stdout=log_file, stderr=subprocess.STDOUT)
     
@@ -254,7 +255,8 @@ while simulation_time < (simulation_end_time * 60) and number_of_runs <= maximum
             wall_closed = True 
             
     print("Done.\n", flush=True)
-    
+
+    print("Updating wall coordinates in Gmsh file...", flush=True)
     
     updated_wall_coordinates_Gmsh = updateGeometry.interpolateSpline(wall_coordinates, dRw_total, gmsh_points[:,0])
     
