@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
         Source_e = -h_droplet*(Source_Y_nucleation +
                                 Source_Y_growth_active_coeff*rhoY);
 								
-		Source_e_wall = -h_droplet*(mdot_a + mdot_s);
+		Source_e_wall = -h_droplet*mdot_a + h_fg*mdot_s;
 
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi) ==
@@ -385,10 +385,16 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		
-		mdot_s.primitiveFieldRef() = 0.0; // REMOVE THIS
-		//mdot_a.primitiveFieldRef() = 0.0; // REMOVE THIS
-		
+
+        if (!(wall_accretion))
+        {
+          mdot_a.primitiveFieldRef() = 0.0;  
+        }
+
+        if (!(wall_sublimation))
+        {
+          mdot_s.primitiveFieldRef() = 0.0;  
+        }
 		
         // -------------------------------------------------------------- //
         // -------------------------------------------------------------- //
@@ -401,7 +407,7 @@ int main(int argc, char *argv[])
         forAll(T, cellI)
         {
 		  #include "phaseChangeThermodynamics/saturationProperties.H"
-
+        
           // Since the conservation equations for N and Y are not directly
           // coupled, it may happen numerically that N>0 while Y=0 (or, rarely,
           // vice-versa).
@@ -440,7 +446,7 @@ int main(int argc, char *argv[])
                 {
                     // Mean radius resulting from existing droplets in the cell
                     r_droplet_actual[cellI] = Foam::pow((3.0*Y[cellI]/
-                                              (4.0*pi*rho_grain.value()*
+                                              (4.0*pi*rho_grain[cellI]*
                                               N[cellI])), 1.0/3.0);
 
                     // Total interfacial surface area per unit mass
@@ -464,7 +470,7 @@ int main(int argc, char *argv[])
 
                   // Critical radius
                   r_droplet_critical[cellI] = 2.0*surface_tension[cellI]/
-                                                (rho_grain.value()*DeltaG[cellI]);
+                                                (rho_droplet[cellI]*DeltaG[cellI]);
                 }
                 else // No supersaturation, set radius to 0, for convenience
                 {
@@ -493,7 +499,7 @@ int main(int argc, char *argv[])
                                             (2.0*r_droplet_actual[cellI]);
 
                   // Rate of droplet growth
-                  drdt[cellI] = kappa[cellI]*T_sc[cellI]/(rho_grain.value()*h_fg[cellI]*r_droplet_actual[cellI])*
+                  drdt[cellI] = kappa[cellI]*T_sc[cellI]/(rho_grain[cellI]*h_fg[cellI]*r_droplet_actual[cellI])*
 			(1 - r_droplet_critical[cellI]/r_droplet_actual[cellI])/(1 + 3.78*(1 - v_corr[cellI])*
 			Knudsen_droplet[cellI]/Prandtl[cellI]);
 
@@ -509,26 +515,14 @@ int main(int argc, char *argv[])
 
         //****************************************************************//
         //****************************************************************//
-
+            
                 if (r_droplet_critical[cellI] > r_droplet_minimum.value())
                 {
-                  // Kantrowitz correction factor for the nucleation rate
-                  // etaKantrowitz[cellI] = 2.0*(gamma[cellI]-1.0)/
-                                         //gamma[cellI]+1.0)*
-                                         //h_fg[cellI]/(R.value()*T[cellI])*
-                                         //(h_fg[cellI]/
-                                         //(R.value()*T[cellI]) - 0.5);
-                  // if (etaKantrowitz[cellI] < 0.0 )
-                  //{
-                    //Info << "WARNING: Kantrowitz correction factor is negative, assumed zero" << endl;
-                    //etaKantrowitz[cellI] = 0.0;
-                  //}
-
                   // Nucleation rate of critical radius droplets,
                   // per unit volume of vapour
                   J[cellI] = Foam::sqrt(2.0*surface_tension[cellI]/(pi*
                              m_gas.value()*m_gas.value()*m_gas.value()))*
-                             rho[cellI]*rho[cellI]/rho_grain.value()*
+                             rho[cellI]*rho[cellI]/rho_droplet[cellI]*
                              Foam::exp(-4.0*pi*r_droplet_critical[cellI]*
                              r_droplet_critical[cellI]*surface_tension[cellI]
                              /(3.0*k_B.value()*T[cellI]));
@@ -558,7 +552,7 @@ int main(int argc, char *argv[])
 
                 // Contribution to the liquid mass from the
                 // nucleation of new droplets
-               Source_Y_nucleation[cellI] = J[cellI]*rho_grain.value()*
+               Source_Y_nucleation[cellI] = J[cellI]*rho_droplet[cellI]*
                                                 4.0/3.0*pi*
                                                 r_droplet_critical[cellI]*
                                                 r_droplet_critical[cellI]*
@@ -566,7 +560,7 @@ int main(int argc, char *argv[])
 
                 // Contribution to the liquid mass from the
                 // growth of existing droplets
-                Source_Y_growth[cellI] = rho_grain.value()*beta[cellI]
+                Source_Y_growth[cellI] = rho_grain[cellI]*beta[cellI]
                                                   *drdt[cellI]*rho[cellI];
 
                 // Total (nucleation + growth) liquid mass source term

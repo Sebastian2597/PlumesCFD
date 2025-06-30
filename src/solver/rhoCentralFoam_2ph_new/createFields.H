@@ -454,20 +454,6 @@ volScalarField v_corr // Young's correction factor for the droplet growth model
     dimensionedScalar("v_corr", dimless, 0)
 );
 
-//volScalarField etaKantrowitz // Kantrowitz's correction factor on the nucleation rate for non-isothermal effects
-//(
-    //IOobject
-    //(
-	//"etaKantrowitz",
-	//runTime.timeName(),
-	//mesh,
-	//IOobject::NO_READ,
-	//IOobject::NO_WRITE
-    //),
-    //mesh,
-    //dimensionedScalar("etaKantrowitz", dimensionSet(0, 0, 0, 0, 0, 0, 0), 0)
-//);
-
 volScalarField J // Nucleation rate, i.e., number of droplets per unit volume
 (
     IOobject
@@ -715,6 +701,32 @@ volScalarField Source_e_wall
 	IOobject::NO_WRITE
     ),
     h_liquid*mdot_a // Same units
+);
+
+volScalarField rho_grain
+(
+    IOobject
+    (
+	"rho_grain",
+	runTime.timeName(),
+	mesh,
+	IOobject::NO_READ,
+	IOobject::NO_WRITE
+    ),
+    thermo.rho() // same units as rho
+);
+
+volScalarField rho_droplet
+(
+    IOobject
+    (
+	"rho_droplet",
+	runTime.timeName(),
+	mesh,
+	IOobject::NO_READ,
+	IOobject::NO_WRITE
+    ),
+    thermo.rho()
 );
 
 

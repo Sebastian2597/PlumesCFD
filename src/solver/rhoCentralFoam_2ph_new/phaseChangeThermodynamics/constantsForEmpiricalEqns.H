@@ -8,6 +8,9 @@
 	// Boltzmann constant
 	const dimensionedScalar k_B("k_B", dimensionSet(1,2,-2,-1,0,0,0), 1.38064852e-23);
 
+	// Molar mass of H2O
+	 const dimensionedScalar m_molar("m_molar", dimensionSet(1,0,0,0,0,0,0), 18.01528e-3); // kg/mol
+
 	// Molecular (note: not molar) mass of H2O 
 	const dimensionedScalar m_gas("m_gas", dimensionSet(1,0,0,0,0,0,0), 2.988E-26);	
 
@@ -29,7 +32,7 @@
 	const scalar p_lambda_average = 0.18756;
 	
 	// Exponential prefactor: vibrational frequency of ice
-	const dimensionedScalar nu_s("nu_s", dimensionSet(0,0,-1,0,0,0,0), 2.29e12); // s-1
+	const dimensionedScalar nu_s("nu_s", dimensionSet(0,0,-1,0,0,0,0), 1243996245262610.2); // s-1
 
 	// Binding energy of the ice
 	const dimensionedScalar E_b("E_b", dimensionSet(1,2,-2,0,0,0,0), 5600 * k_B.value()); // J
@@ -37,10 +40,14 @@
 	// Area number density of water molecules based on 3 angstrom
 	const dimensionedScalar area_number_density("area_number_density", dimensionSet(0,-2,0,0,0,0,0), 1/Foam::pow((3*1e-10),2)); // m-2
 
+	// Boolean for wall accretion and wall sublimation
+	const bool wall_accretion = true; // Set to false if you do not want to model
+	const bool wall_sublimation = true; // Set to false if you do not want to model
+
 // ----------------------- //
 // Liquid properties
 // ----------------------- //
-	const dimensionedScalar rho_grain("rho_grain", dimensionSet(1,-3,0,0,0,0,0), 920.0); // kg/m3
+	//const dimensionedScalar rho_grain("rho_grain", dimensionSet(1,-3,0,0,0,0,0), 920.0); // kg/m3
 
 	// Liquid surface tension
 	const scalar sigma_B = 0.2358;
