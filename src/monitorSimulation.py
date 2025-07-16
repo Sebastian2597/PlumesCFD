@@ -122,7 +122,7 @@ def update_control_dict(new_end_time):
             else:
                 f.write(line)
 
-def check_rms(convergence_thresholds):
+def check_rms(convergence_thresholds, steady_state_simulation_end_time_limit):
     print("Running simulation & monitoring convergence based on RMS error...", flush=True)
     last_checked = set()
     steady_count = 0
@@ -135,6 +135,13 @@ def check_rms(convergence_thresholds):
 
             # Check if new time steps appeared
             new_dirs = set(time_dirs) - last_checked
+
+            latest_time = time_dirs[-1] if time_dirs else None
+
+            if latest_time == steady_state_simulation_end_time_limit:
+                print(f"Warning! Simulation time: {latest_time} matches endTime limit {steady_state_simulation_end_time_limit}. Stopping RMS check.", flush=True)
+                break
+
             if len(time_dirs) >= 2 and new_dirs:
                 print(f"\nNew time steps detected: {sorted(new_dirs)}", flush=True)
                 last_checked = set(time_dirs)

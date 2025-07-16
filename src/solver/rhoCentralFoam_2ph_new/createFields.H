@@ -106,7 +106,7 @@ autoPtr<compressible::turbulenceModel> turbulence
 
 // --- Fields for the grains
 
-volScalarField N	// Number of droplets per unit vapour mass
+volScalarField N	// Number of grains per unit vapour mass
 (
     IOobject
     (
@@ -119,7 +119,7 @@ volScalarField N	// Number of droplets per unit vapour mass
     mesh
 );
 
-volScalarField Y	// Liquid mass fraction
+volScalarField Y	// Solid mass fraction
 (
     IOobject
     (
@@ -340,13 +340,14 @@ volScalarField S_sat
         "S_sat",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedScalar("S_sat", dimless, 0)
 );
 
-// 	dimensionedScalar("S_sat", dimless, 0)
+
     
 
 
@@ -359,7 +360,7 @@ volScalarField T_sc
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar("T_sc", dimTemperature, 0)
@@ -383,34 +384,35 @@ volScalarField h_fg // Change in enthalpy upon condensation
     dimensionedScalar("h_fg", dimEnergy/dimMass, 0)
 );
 
-volScalarField r_droplet_critical // Critical droplet radius
+volScalarField r_grain_critical // Critical grain radius
 (
     IOobject
     (
-	"r_droplet_critical",
+	"r_grain_critical",
 	runTime.timeName(),
 	mesh,
 	IOobject::NO_READ,
 	IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("r_droplet_critical", dimLength, 0)
+    dimensionedScalar("r_grain_critical", dimLength, 0)
 );
 
-volScalarField r_droplet_actual // Current droplet radius
+volScalarField r_grain_actual // Current grain radius
 (
     IOobject
     (
-	"r_droplet_actual",
+	"r_grain_actual",
 	runTime.timeName(),
 	mesh,
-	IOobject::MUST_READ,
+	IOobject::NO_READ,
 	IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedScalar("r_grain_actual", dimLength, 0)
 );
 
-//     dimensionedScalar("r_droplet_actual", dimLength, 0)
+//     dimensionedScalar("r_grain_actual", dimLength, 0)
 
 volScalarField mean_free_path // Mean free path of the gas at local conditions
 (
@@ -426,21 +428,21 @@ volScalarField mean_free_path // Mean free path of the gas at local conditions
     dimensionedScalar("mean_free_path", dimLength, 0)
 );
 
-volScalarField Knudsen_droplet // Knudsen number based on the diameter of the droplet
+volScalarField Knudsen_grain // Knudsen number based on the diameter of the grain
 (
     IOobject
     (
-	"Knudsen_droplet",
+	"Knudsen_grain",
 	runTime.timeName(),
 	mesh,
 	IOobject::NO_READ,
 	IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Knudsen_droplet", dimless, 0)
+    dimensionedScalar("Knudsen_grain", dimless, 0)
 );
 
-volScalarField v_corr // Young's correction factor for the droplet growth model
+volScalarField v_corr // Young's correction factor for the grain growth model
 (
     IOobject
     (
@@ -454,37 +456,51 @@ volScalarField v_corr // Young's correction factor for the droplet growth model
     dimensionedScalar("v_corr", dimless, 0)
 );
 
-volScalarField J // Nucleation rate, i.e., number of droplets per unit volume
+volScalarField etaKantrowitz // Kantrowitz's correction factor on the nucleation rate for non-isothermal effects
+(
+    IOobject
+    (
+	"etaKantrowitz",
+	runTime.timeName(),
+	mesh,
+	IOobject::NO_READ,
+	IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("etaKantrowitz", dimensionSet(0, 0, 0, 0, 0, 0, 0), 0)
+);
+
+volScalarField J // Nucleation rate, i.e., number of grains per unit volume
 (
     IOobject
     (
 	"J",
 	runTime.timeName(),
 	mesh,
-	IOobject::MUST_READ,
+	IOobject::NO_READ,
 	IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedScalar("J", dimensionSet(0, -3, -1, 0, 0, 0, 0), 0)
 );
 
-// dimensionedScalar("J", dimensionSet(0, -3, -1, 0, 0, 0, 0), 0)
-
-volScalarField drdt // Rate of droplet growth in the radial direction
+volScalarField drdt // Rate of grain growth in the radial direction
 (
     IOobject
     (
 	"drdt",
 	runTime.timeName(),
 	mesh,
-	IOobject::MUST_READ,
+	IOobject::NO_READ,
 	IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedScalar("drdt", dimLength/dimTime, 0)
 );
 
 //     dimensionedScalar("drdt", dimLength/dimTime, 0)
 
-volScalarField beta // Total surface area of droplets, per unit mass of vapour [m2/kg]
+volScalarField beta // Total surface area of grains, per unit mass of vapour [m2/kg]
 (
     IOobject
     (
@@ -530,22 +546,22 @@ volScalarField h_liquid // Specific enthalpy energy of the liquid phase
     dimensionedScalar("h_liquid", dimEnergy/dimMass, 0)
 );
 
-volScalarField h_droplet // Enthalpy of the droplet (Bulk liquid enthalpy + surface energy + kinetic energy)
+volScalarField h_grain // Enthalpy of the grain (Bulk liquid enthalpy + surface energy + kinetic energy)
 (
     IOobject
     (
-	"h_droplet",
+	"h_grain",
 	runTime.timeName(),
 	mesh,
 	IOobject::NO_READ,
 	IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("h_droplet", dimEnergy/dimMass, 0)
+    dimensionedScalar("h_grain", dimEnergy/dimMass, 0)
 );
 
 // ------------------------------------- //
-// Source terms for the liquid phase
+// Source terms for the solid phase
 // ------------------------------------- //
 
 	// Source terms are linearised into passive and active components to promote convergence, according to Picard's rule
@@ -708,19 +724,6 @@ volScalarField rho_grain
     IOobject
     (
 	"rho_grain",
-	runTime.timeName(),
-	mesh,
-	IOobject::NO_READ,
-	IOobject::NO_WRITE
-    ),
-    thermo.rho() // same units as rho
-);
-
-volScalarField rho_droplet
-(
-    IOobject
-    (
-	"rho_droplet",
 	runTime.timeName(),
 	mesh,
 	IOobject::NO_READ,

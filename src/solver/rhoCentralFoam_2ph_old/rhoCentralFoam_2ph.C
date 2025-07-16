@@ -35,6 +35,7 @@ Description
 #include "directionInterpolate.H"
 #include "localEulerDdtScheme.H"
 #include "fvcSmooth.H"
+#include "wallFvPatch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -74,6 +75,25 @@ int main(int argc, char *argv[])
     // Store cell volumes (useful later in the code)
     cellVolume.ref() = mesh.V(); // Not applicable to cells at boundaries
 
+    // Store cells adjacent to the wall patch & store temperature at the wall
+	
+	  labelList wallCells;
+
+    forAll(mesh.boundary(), patchI)
+    {
+      const fvPatch& patch = mesh.boundary()[patchI];
+      
+      if (isA<wallFvPatch>(patch))
+      {
+        const labelUList& faceCells = patch.faceCells();
+
+        forAll(faceCells, i)
+        {
+          wallCells.append(faceCells[i]);
+        }
+      }
+    }    
+
     Info<< "\nStarting time loop\n" << endl;
 
     while (runTime.run())
@@ -87,10 +107,10 @@ int main(int argc, char *argv[])
         surfaceVectorField rhoU_neg(interpolate(rhoU, neg, U.name()));
 
         surfaceScalarField rhoY_pos(interpolate(rhoY, pos, Y.name()));
-	surfaceScalarField rhoY_neg(interpolate(rhoY, neg, Y.name()));
+	      surfaceScalarField rhoY_neg(interpolate(rhoY, neg, Y.name()));
 
         surfaceScalarField rhoN_pos(interpolate(rhoN, pos, N.name()));
-	surfaceScalarField rhoN_neg(interpolate(rhoN, neg, N.name()));
+	      surfaceScalarField rhoN_neg(interpolate(rhoN, neg, N.name()));
 
         volScalarField rPsi("rPsi", 1.0/psi);
         surfaceScalarField rPsi_pos(interpolate(rPsi, pos, T.name()));
@@ -103,10 +123,10 @@ int main(int argc, char *argv[])
         surfaceVectorField U_neg("U_neg", rhoU_neg/rho_neg);
 
         surfaceScalarField Y_pos("Y_pos", rhoY_pos/rho_pos);
-	surfaceScalarField Y_neg("Y_neg", rhoY_neg/rho_neg);
+	      surfaceScalarField Y_neg("Y_neg", rhoY_neg/rho_neg);
 
         surfaceScalarField N_pos("N_pos", rhoN_pos/rho_pos);
-	surfaceScalarField N_neg("N_neg", rhoN_neg/rho_neg);
+	      surfaceScalarField N_neg("N_neg", rhoN_neg/rho_neg);
 
         surfaceScalarField p_pos("p_pos", rho_pos*rPsi_pos);
         surfaceScalarField p_neg("p_neg", rho_neg*rPsi_neg);
@@ -117,13 +137,13 @@ int main(int argc, char *argv[])
         surfaceScalarField phiv_neg("phiv_neg", U_neg & mesh.Sf());
         phiv_neg.setOriented(false);
 
-	// --- Thermophysical properties
+	      // --- Thermophysical properties
         Cp = thermo.Cp();              // Specific heat at constant pressure
         Cv = thermo.Cv();              // Specific heat at constant volume
         gamma = thermo.gamma();        // Ratio of specific heats
         c = sqrt(gamma*rPsi);          // Speed of sound
 
-	// Evaluate convective fluxes
+	      // Evaluate convective fluxes
         surfaceScalarField cSf_pos
         (
             "cSf_pos",
@@ -194,12 +214,12 @@ int main(int argc, char *argv[])
 
         phiY = aphiv_pos*rhoY_pos + aphiv_neg*rhoY_neg;
 
-	surfaceVectorField phiU(aphiv_pos*rhoU_pos + aphiv_neg*rhoU_neg);
+	      surfaceVectorField phiU(aphiv_pos*rhoU_pos + aphiv_neg*rhoU_neg);
         // Note: reassembled orientation from the pos and neg parts so becomes
         // oriented
         phiU.setOriented(true);
 
-	surfaceVectorField phiUp(phiU + (a_pos*p_pos + a_neg*p_neg)*mesh.Sf());
+	      surfaceVectorField phiUp(phiU + (a_pos*p_pos + a_neg*p_neg)*mesh.Sf());
 
         surfaceScalarField phiEp
         (
@@ -209,7 +229,7 @@ int main(int argc, char *argv[])
           + aSf*p_pos - aSf*p_neg
         );
 
-	// --- Tranpsort properties
+	      // --- Tranpsort properties
         volScalarField muEff("muEff", turbulence->muEff());
         volTensorField tauMC("tauMC", muEff*dev2(Foam::T(fvc::grad(U))));
 
@@ -220,16 +240,45 @@ int main(int argc, char *argv[])
         Source_e = -h_droplet*(Source_Y_nucleation +
                                 Source_Y_growth_active_coeff*rhoY);
 
+        
+        // Set wall source terms for accretion and sublimation for the energy equation
+        forAll(mesh.boundary(), patchI)
+        {
+            const fvPatch& patch = mesh.boundary()[patchI];
+
+            if (isA<wallFvPatch>(patch))
+            {
+                const fvPatchField<scalar>& T_patch = T.boundaryField()[patchI];
+                bool isAdiabatic = (T_patch.type() == "zeroGradient");
+                const scalarField& T_wall = T_patch;
+                const labelUList& faceCells = patch.faceCells();
+
+                forAll(faceCells, faceI)
+                {
+                    const label cellI = faceCells[faceI];
+
+                    if (isAdiabatic)
+                    {
+                        Source_e_wall[cellI] = h_droplet[cellI] * mdot_a[cellI];
+                    }
+                    else
+                    {
+                        Source_e_wall[cellI] = h_droplet[cellI]*mdot_a[cellI] + 
+                                              mdot_s[cellI]*(h_fg[cellI] + Cv[cellI]*T_wall[faceI]);
+                    }
+                }
+            }
+        }
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi) ==
-        -(Source_Y_nucleation + Source_Y_growth_active_coeff*rhoY));
+        -(Source_Y_nucleation + Source_Y_growth_active_coeff*rhoY) + mdot_a + mdot_s);
 
         // --- Solve momentum
-	volVectorField Source_U("Source_U", -U*Source_Y);
-	volVectorField Source_U_linear_explicit("Source_U_linear_explicit", SourceMomentumFactor*rhoU);
+	      volVectorField Source_U("Source_U", U*(-Source_Y + mdot_a + mdot_s));
+	      volVectorField Source_U_linear_explicit("Source_U_linear_explicit", SourceMomentumFactor*rhoU);
 
         solve(fvm::ddt(rhoU) + fvc::div(phiUp) ==
-	Source_U - Source_U_linear_explicit + fvm::SuSp(SourceMomentumFactor, rhoU));
+	      Source_U - Source_U_linear_explicit + fvm::SuSp(SourceMomentumFactor, rhoU));
 
         U.ref() = rhoU()/rho();
         U.correctBoundaryConditions();
@@ -263,7 +312,7 @@ int main(int argc, char *argv[])
           + fvc::div(phiEp)
           - fvc::div(sigmaDotU)
           ==
-          Source_e
+          Source_e + Source_e_wall
         );
 
         e = rhoE/rho - 0.5*magSqr(U);
@@ -286,37 +335,37 @@ int main(int argc, char *argv[])
             rhoE = rho*(e + 0.5*magSqr(U));
         }
 
-	// --- Solve droplet number
-	solve(fvm::ddt(rhoN) + fvc::div(phiN) == J);
-	N.ref() = rhoN()/rho();
-	N.correctBoundaryConditions();
-	rhoN.boundaryFieldRef() == rho.boundaryField()*N.boundaryField();
+        // --- Solve droplet number
+        solve(fvm::ddt(rhoN) + fvc::div(phiN) == J);
+        N.ref() = rhoN()/rho();
+        N.correctBoundaryConditions();
+        rhoN.boundaryFieldRef() == rho.boundaryField()*N.boundaryField();
 
-	// --- Solve grain mass fraction
-	volScalarField Source_Y_growth_linear_explicit("Source_Y_growth_linear_explicit", Source_Y_growth_active_coeff*rhoY);
+        // --- Solve grain mass fraction
+        volScalarField Source_Y_growth_linear_explicit("Source_Y_growth_linear_explicit", Source_Y_growth_active_coeff*rhoY);
 
-	solve
-	    (
-		fvm::ddt(rhoY)
-		+ fvc::div(phiY)
-		==
-		Source_Y
-		- Source_Y_growth_linear_explicit
-		+ fvm::SuSp(Source_Y_growth_active_coeff, rhoY)
-            );
+        solve
+            (
+          fvm::ddt(rhoY)
+          + fvc::div(phiY)
+          ==
+          Source_Y
+          - Source_Y_growth_linear_explicit
+          + fvm::SuSp(Source_Y_growth_active_coeff, rhoY)
+                  );
 
-	Y.ref() = rhoY()/rho();
+        Y.ref() = rhoY()/rho();
 
-	Y.correctBoundaryConditions();
+        Y.correctBoundaryConditions();
 
-	rhoY.boundaryFieldRef() == rho.boundaryField()*Y.boundaryField();
+        rhoY.boundaryFieldRef() == rho.boundaryField()*Y.boundaryField();
 
         p.ref() = rho()/psi();
         p.correctBoundaryConditions();
         rho.boundaryFieldRef() == psi.boundaryField()*p.boundaryField();
 
-	Mach = mag(U)/c;
-	h = e + p/rho; // Specific enthalpy of gas
+        Mach = mag(U)/c;
+        h = e + p/rho; // Specific enthalpy of gas
 
         turbulence->correct();
 
@@ -329,7 +378,52 @@ int main(int argc, char *argv[])
         // Flow similarity parameters
         volScalarField Prandtl("Prandtl", thermo.Cp()*thermo.mu()/thermo.kappa()); // Prandtl number
 
+        // Wall-related source terms
 
+        // Wall accretion
+        forAll(wallCells, i)
+        {
+          const label cellI = wallCells[i];
+          mdot_a[cellI] = -rho[cellI]
+            * Foam::sqrt((8.0 * k_B.value() * T[cellI]) / (pi * m_gas.value()))
+            * sticking_coefficient * p_lambda_average;
+        }
+            
+        // Wall sublimation
+        forAll(mesh.boundary(), patchI)
+        {
+          const fvPatch& patch = mesh.boundary()[patchI];
+
+          if (isA<wallFvPatch>(patch))
+          {
+            const scalarField& T_wall = T.boundaryField()[patchI];
+            const labelUList& faceCells = patch.faceCells();
+
+            forAll(T_wall, faceI)
+            {
+                scalar T_face = T_wall[faceI];
+                label cellI = faceCells[faceI];
+                mdot_s[cellI] = nu_s.value()*area_number_density.value()*m_gas.value()
+                    *Foam::exp(-E_b.value()/(k_B.value()*T_face));
+
+              }
+            }
+        }
+
+        // Set the wall-related source terms to zero if the
+        // wall accretion and sublimation are not active
+        if (!(wall_accretion))
+        {
+          mdot_a.primitiveFieldRef() = 0.0;  
+        }
+
+        if (!(wall_sublimation))
+        {
+          mdot_s.primitiveFieldRef() = 0.0;  
+        }
+		
+
+        
         // -------------------------------------------------------------- //
         // -------------------------------------------------------------- //
       	// --- UPDATE THE CONSERVATION SOURCE TERMS
@@ -340,7 +434,7 @@ int main(int argc, char *argv[])
         // (i.e. cells at the boundaries not included, coming later)
         forAll(T, cellI)
         {
-	  #include "phaseChangeThermodynamics/saturationProperties.H"
+	        #include "phaseChangeThermodynamics/saturationProperties.H"
 
           // Since the conservation equations for N and Y are not directly
           // coupled, it may happen numerically that N>0 while Y=0 (or, rarely,
@@ -363,12 +457,12 @@ int main(int argc, char *argv[])
               // thermophysical relations
           if (T[cellI] < T_crit.value()
               && T[cellI] < Tsat[cellI]
-              && T[cellI] >= 173.16)
+              && T[cellI] >= 115.0)
           {
             // --- UPDATE LIQUID-RELATED THERMODYNAMIC PROPERTIES IN THE CELL
 
-                // External file for liquid-related properties
-		#include "phaseChangeThermodynamics/liquidThermophysicalProperties.H"
+            // External file for liquid-related properties
+		        #include "phaseChangeThermodynamics/liquidThermophysicalProperties.H"
 
         //******************************************************************//
         //******************************************************************//
@@ -380,7 +474,7 @@ int main(int argc, char *argv[])
                 {
                     // Mean radius resulting from existing droplets in the cell
                     r_droplet_actual[cellI] = Foam::pow((3.0*Y[cellI]/
-                                              (4.0*pi*rho_grain.value()*
+                                              (4.0*pi*rho_grain[cellI]*
                                               N[cellI])), 1.0/3.0);
 
                     // Total interfacial surface area per unit mass
@@ -404,7 +498,7 @@ int main(int argc, char *argv[])
 
                   // Critical radius
                   r_droplet_critical[cellI] = 2.0*surface_tension[cellI]/
-                                                (rho_grain.value()*DeltaG[cellI]);
+                                                (rho_grain[cellI]*DeltaG[cellI]);
                 }
                 else // No supersaturation, set radius to 0, for convenience
                 {
@@ -433,7 +527,7 @@ int main(int argc, char *argv[])
                                             (2.0*r_droplet_actual[cellI]);
 
                   // Rate of droplet growth
-                  drdt[cellI] = kappa[cellI]*T_sc[cellI]/(rho_grain.value()*h_fg[cellI]*r_droplet_actual[cellI])*
+                  drdt[cellI] = kappa[cellI]*T_sc[cellI]/(rho_grain[cellI]*h_fg[cellI]*r_droplet_actual[cellI])*
 			(1 - r_droplet_critical[cellI]/r_droplet_actual[cellI])/(1 + 3.78*(1 - v_corr[cellI])*
 			Knudsen_droplet[cellI]/Prandtl[cellI]);
 
@@ -453,28 +547,29 @@ int main(int argc, char *argv[])
                 if (r_droplet_critical[cellI] > r_droplet_minimum.value())
                 {
                   // Kantrowitz correction factor for the nucleation rate
-                  // etaKantrowitz[cellI] = 2.0*(gamma[cellI]-1.0)/
-                                         //gamma[cellI]+1.0)*
-                                         //h_fg[cellI]/(R.value()*T[cellI])*
-                                         //(h_fg[cellI]/
-                                         //(R.value()*T[cellI]) - 0.5);
-                  // if (etaKantrowitz[cellI] < 0.0 )
-                  //{
-                    //Info << "WARNING: Kantrowitz correction factor is negative, assumed zero" << endl;
-                    //etaKantrowitz[cellI] = 0.0;
-                  //}
+                  etaKantrowitz[cellI] = 2.0*(gamma[cellI]-1.0)/
+                                         (gamma[cellI]+1.0)*
+                                         h_fg[cellI]/(R.value()*T[cellI])*
+                                         (h_fg[cellI]/
+                                         (R.value()*T[cellI]) - 0.5);
+                  if (etaKantrowitz[cellI] < 0.0 )
+                  {
+                    Info << "WARNING: Kantrowitz correction factor is negative, assumed zero" << endl;
+                    etaKantrowitz[cellI] = 0.0;
+                  }
 
                   // Nucleation rate of critical radius droplets,
                   // per unit volume of vapour
                   J[cellI] = Foam::sqrt(2.0*surface_tension[cellI]/(pi*
                              m_gas.value()*m_gas.value()*m_gas.value()))*
-                             rho[cellI]*rho[cellI]/rho_grain.value()*
+                             rho[cellI]*rho[cellI]/rho_grain[cellI]*
                              Foam::exp(-4.0*pi*r_droplet_critical[cellI]*
                              r_droplet_critical[cellI]*surface_tension[cellI]
                              /(3.0*k_B.value()*T[cellI]));
 
                   // Correction by Wölk and Strey
-		  J[cellI] = J[cellI]*Foam::exp(-27.56 + 6500.0/T[cellI]);
+		              J[cellI] = J[cellI]*Foam::exp(-27.56 + 6500.0/T[cellI]);
+                  //J[cellI] = J[cellI]/(1.0 + etaKantrowitz[cellI]);
 
                   // If there is at least 1 critically sized molecule generated
                   // in the cell volume over this timestep
@@ -498,7 +593,7 @@ int main(int argc, char *argv[])
 
                 // Contribution to the liquid mass from the
                 // nucleation of new droplets
-               Source_Y_nucleation[cellI] = J[cellI]*rho_grain.value()*
+               Source_Y_nucleation[cellI] = J[cellI]*rho_grain[cellI]*
                                                 4.0/3.0*pi*
                                                 r_droplet_critical[cellI]*
                                                 r_droplet_critical[cellI]*
@@ -506,7 +601,7 @@ int main(int argc, char *argv[])
 
                 // Contribution to the liquid mass from the
                 // growth of existing droplets
-                Source_Y_growth[cellI] = rho_grain.value()*beta[cellI]
+                Source_Y_growth[cellI] = rho_grain[cellI]*beta[cellI]
                                                   *drdt[cellI]*rho[cellI];
 
                 // Total (nucleation + growth) liquid mass source term

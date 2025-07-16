@@ -14,8 +14,8 @@
 	// Molecular (note: not molar) mass of H2O 
 	const dimensionedScalar m_gas("m_gas", dimensionSet(1,0,0,0,0,0,0), 2.988E-26);	
 
-	// Minimum physically meaningful radius of a H2O liduid (see documentation)
-	const dimensionedScalar r_droplet_minimum("r_droplet_minimum", dimensionSet(0,1,0,0,0,0,0), 2.75E-10);	
+	// Minimum physically meaningful radius of a H2O grain (see documentation)
+	const dimensionedScalar r_grain_minimum("r_grain_minimum", dimensionSet(0,1,0,0,0,0,0), 2.75E-10);	
 
 	// Specific gas constant
 	const dimensionedScalar R("R", dimensionSet(0,2,-2,-1,0,0,0), 461.52);
@@ -41,27 +41,15 @@
 	const dimensionedScalar area_number_density("area_number_density", dimensionSet(0,-2,0,0,0,0,0), 1/Foam::pow((3*1e-10),2)); // m-2
 
 	// Boolean for wall accretion and wall sublimation
-	const bool wall_accretion = true; // Set to false if you do not want to model
-	const bool wall_sublimation = true; // Set to false if you do not want to model
+	const bool wall_accretion = false; // Set to false if you do not want to model
+	const bool wall_sublimation = false; // Set to false if you do not want to model
 
 // ----------------------- //
 // Liquid properties
 // ----------------------- //
-	//const dimensionedScalar rho_grain("rho_grain", dimensionSet(1,-3,0,0,0,0,0), 920.0); // kg/m3
 
 	// Liquid surface tension
 	const scalar sigma_B = 0.2358;
 	const scalar sigma_b = -0.625;
 	const scalar sigma_mu = 1.256;
 
-// ----------------------- //
-// Dimensioned factors that are later used to remove dimensionality from some thermophysical properties
-// This is done because "for" loops are used in the code and:
-//	1) OpenFOAM is sensitive to dimensional consistency (and rightly so)
-//	2) OpenFOAM does not carry a parameter's dimensionality into a loop - this is inherent to how the software (and C++) is structured
-// So the factors below are used to nondimensionalise some parameters that are used in loops
-// ----------------------- //
-
-    dimensionedScalar unit_Kelvin("unit_Kelvin", dimTemperature, 1.0); // To resolve dimensional inconsistencies
-    dimensionedScalar unit_MPa("unit_MPa", dimPressure, 1000000.0); // To resolve dimensional inconsistencies
-    dimensionedScalar unit_specific_heat("unit_specific_heat", dimensionSet(0, 2, -2, -1, 0, 0, 0), 1.0); // To resolve dimensional inconsistencies
